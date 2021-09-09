@@ -9,7 +9,7 @@ try:
 except:
     pass
 
-from deta import app
+from deta import app, Deta
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -69,20 +69,23 @@ def send(message):
 @app.lib.cron()
 def main(event=None) -> str:
     logger.info("START")
-    github_stats = get_github_stats()
-    patreon_stats = get_patreon_stats()
+    stats = {"github": get_github_stats(), "patreon": get_patreon_stats()}
+
+    deta = Deta()
+    db = deta.Base("stats")
+    prev_stats = db.get("meetingbar")
+    db.put(stats, "meetingbar")
 
     message = (
         "MeetingBar\n"
-        f"⭐{github_stats['stargazers']}"
-        f"📥{github_stats['downloads']}"
-        "\n"
-        f"🦸{patreon_stats['patron_count']}"
-        f"${patreon_stats['pledge_sum']}"
+        f"⭐{stats['github']['stargazers']} ({stats['github']['stargazers'] - prev_stats['github']['stargazers']:+})\n"
+        f"📥{stats['github']['downloads']} ({stats['github']['downloads'] - prev_stats['github']['downloads']:+})\n"
+        f"🦸{stats['patreon']['patron_count']} ({stats['patreon']['patron_count'] - prev_stats['patreon']['patron_count']:+})\n"
+        f"💸 ${stats['patreon']['pledge_sum']} ({stats['patreon']['pledge_sum'] - prev_stats['patreon']['pledge_sum']:+})\n"
     )
 
     send(message)
-    logger.info("END")
+    logger.info("SENT")
     return "Success"
 
 
