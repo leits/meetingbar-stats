@@ -65,14 +65,23 @@ def send(message):
     logger.info(f"Sent message to telegram")
 
 
-@app.lib.run(action="report")
+@app.lib.run()
 @app.lib.cron()
 def main(event=None) -> str:
     logger.info("START")
     github_stats = get_github_stats()
-    # patreon_stats = get_patreon_stats()
+    patreon_stats = get_patreon_stats()
 
-    send(f"MeetingBar ⭐{github_stats['stargazers']} 📲{github_stats['downloads']}")
+    message = (
+        "MeetingBar\n"
+        f"⭐{github_stats['stargazers']}"
+        f"📥{github_stats['downloads']}"
+        "\n"
+        f"🦸{patreon_stats['patron_count']}"
+        f"${patreon_stats['pledge_sum']}"
+    )
+
+    send(message)
     logger.info("END")
     return "Success"
 
