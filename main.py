@@ -24,7 +24,7 @@ def get_github_stats() -> dict:
     stargazers_count = repo_stats["stargazers_count"]
 
     # Download count
-    resp = requests.get(f"{repo_url}/releases")
+    resp = requests.get(f"{repo_url}/releases?per_page=100")
     releases = resp.json()
 
     download_count = 0
