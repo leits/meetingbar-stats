@@ -1,18 +1,33 @@
 import os
+import json
 import requests
 from loguru import logger
+import resend
 
-try:
-    from dotenv import load_dotenv
+from dotenv import load_dotenv
 
-    load_dotenv()
-except:
-    pass
+load_dotenv()
 
-# from deta import app, Deta
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+RESEND_FROM = os.getenv("RESEND_FROM")
+RESEND_TO = os.getenv("RESEND_TO")
 
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+STATS_FILE = "stats.json"
+
+
+def load_prev_stats() -> dict:
+    if os.path.isfile(STATS_FILE):
+        with open(STATS_FILE, "r") as f:
+            return json.load(f)
+    return {
+        "github": {"stargazers": 0, "downloads": 0},
+        "patreon": {"patron_count": 0, "pledge_sum": 0},
+    }
+
+
+def save_stats(stats: dict):
+    with open(STATS_FILE, "w") as f:
+        json.dump(stats, f, indent=2)
 
 
 def get_github_stats() -> dict:
@@ -53,41 +68,46 @@ def get_patreon_stats() -> dict:
     return patreon_stats
 
 
-def send(message):
-    url = "https://api.telegram.org/bot{}/sendMessage".format(TOKEN)
+def send_via_resend(html_content):
+    resend.api_key = RESEND_API_KEY
+    response = resend.Emails.send(
+        {
+            "from": RESEND_FROM,
+            "to": RESEND_TO,
+            "subject": "Monthly MeetingBar Stats",
+            "html": html_content,
+        }
+    )
+    logger.info(f"Email sent, id={response.get('id')}")
 
-    payload = {
-        "text": message,
-        "chat_id": CHAT_ID,
-        "parse_mode": "markdown",
-    }
-    requests.post(url, data=payload)
-    logger.info(f"Sent message to telegram")
+
+def build_html(stats, prev_stats):
+    html = f"""
+    <h2>Monthly MeetingBar Stats</h2>
+    <ul>
+      <li>⭐ Stars: {stats['github']['stargazers']} ({stats['github']['stargazers'] - prev_stats['github']['stargazers']:+})</li>
+      <li>📥 Downloads: {stats['github']['downloads']} ({stats['github']['downloads'] - prev_stats['github']['downloads']:+})</li>
+      <li>🦸 Patrons: {stats['patreon']['patron_count']} ({stats['patreon']['patron_count'] - prev_stats['patreon']['patron_count']:+})</li>
+      <li>💸 Pledge: ${stats['patreon']['pledge_sum']} ({stats['patreon']['pledge_sum'] - prev_stats['patreon']['pledge_sum']:+})</li>
+    </ul>
+    """
+    return html
 
 
 # @app.lib.run()
 # @app.lib.cron()
 def main(event=None) -> str:
     logger.info("START")
+    prev_stats = load_prev_stats()
+
     stats = {"github": get_github_stats(), "patreon": get_patreon_stats()}
 
-    # deta = Deta()
-    # db = deta.Base("stats")
-    # prev_stats = db.get("meetingbar")
-    # db.put(stats, "meetingbar")
+    html = build_html(stats, prev_stats)
+    send_via_resend(html)
 
-    prev_stats = stats
+    save_stats(stats)
 
-    message = (
-        "MeetingBar\n"
-        f"⭐{stats['github']['stargazers']} ({stats['github']['stargazers'] - prev_stats['github']['stargazers']:+})\n"
-        f"📥{stats['github']['downloads']} ({stats['github']['downloads'] - prev_stats['github']['downloads']:+})\n"
-        f"🦸{stats['patreon']['patron_count']} ({stats['patreon']['patron_count'] - prev_stats['patreon']['patron_count']:+})\n"
-        f"💸 ${stats['patreon']['pledge_sum']} ({stats['patreon']['pledge_sum'] - prev_stats['patreon']['pledge_sum']:+})\n"
-    )
-
-    send(message)
-    print(message)
+    print(html)
     logger.info("SENT")
     return "Success"
 

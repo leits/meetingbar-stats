@@ -1,23 +1,50 @@
-# This is a basic workflow to help you get started with Actions
-
-name: Deploy to Deta
+# .github/workflows/monthly-email.yml
+name: Monthly Stats Email via Resend
 
 on:
-  push:
-    branches: [ main ]
+  schedule:
+    # Запускається о 00:00 UTC першого числа кожного місяця
+    - cron: "0 0 1 * *"
 
-  workflow_dispatch:
+env:
+  RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+  RESEND_FROM: ${{ secrets.RESEND_FROM }}
+  RESEND_TO: ${{ secrets.RESEND_TO }}
+
+permissions:
+  contents: read # для checkout + download-artifact
+  actions: write # для upload-artifact
 
 jobs:
-  deploy:
+  email_stats:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: BogDAAAMN/deta-deploy-action@v1.0.1
+      - name: Try download previous stats
+        uses: actions/download-artifact@v3
         with:
-          # Deta access token
-          deta-access-token:  ${{ secrets.DETA_TOKEN }}
-          deta-name: gh-bot
+          name: stats
+          path: .
+        continue-on-error: true
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Send monthly stats email
+        run: python main.py
+
+      - name: Upload new stats.json
+        uses: actions/upload-artifact@v3
+        with:
+          name: stats
+          path: stats.json
