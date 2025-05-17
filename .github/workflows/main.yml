@@ -1,9 +1,8 @@
 # .github/workflows/monthly-email.yml
 name: Monthly Stats Email via Resend
-
 on:
+  workflow_dispatch:
   schedule:
-    # Запускається о 00:00 UTC першого числа кожного місяця
     - cron: "0 0 1 * *"
 
 env:
@@ -12,8 +11,8 @@ env:
   RESEND_TO: ${{ secrets.RESEND_TO }}
 
 permissions:
-  contents: read # для checkout + download-artifact
-  actions: write # для upload-artifact
+  contents: read
+  actions: write
 
 jobs:
   email_stats:
