@@ -1,3 +1,3 @@
 ## Tools for collecting and reporting MeetingBar stats
 
-main.py - telegram bot for daily reporting github stats (stats and downloads)
+main.py - emaail bot for monthly reports of github and patreon stats of MeetinBar
