@@ -9,7 +9,7 @@ try:
 except:
     pass
 
-from deta import app, Deta
+# from deta import app, Deta
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -65,16 +65,18 @@ def send(message):
     logger.info(f"Sent message to telegram")
 
 
-@app.lib.run()
-@app.lib.cron()
+# @app.lib.run()
+# @app.lib.cron()
 def main(event=None) -> str:
     logger.info("START")
     stats = {"github": get_github_stats(), "patreon": get_patreon_stats()}
 
-    deta = Deta()
-    db = deta.Base("stats")
-    prev_stats = db.get("meetingbar")
-    db.put(stats, "meetingbar")
+    # deta = Deta()
+    # db = deta.Base("stats")
+    # prev_stats = db.get("meetingbar")
+    # db.put(stats, "meetingbar")
+
+    prev_stats = stats
 
     message = (
         "MeetingBar\n"
@@ -85,6 +87,7 @@ def main(event=None) -> str:
     )
 
     send(message)
+    print(message)
     logger.info("SENT")
     return "Success"
 
